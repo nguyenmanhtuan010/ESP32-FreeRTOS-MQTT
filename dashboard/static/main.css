@@ -1,0 +1,61 @@
+.box{
+    width: 33%;
+    height: 191px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-width: 1px;
+    border-color: #4d114f;
+    border-style: solid;
+    color: white;
+}
+
+.box1{
+    background-color: yellow;
+    color: black ;
+}
+
+.box2{
+    background-color: yellow ;
+    color: black ;
+}
+
+.box3{
+    background-color:  gainsboro;
+}
+
+#box5{
+    width: 66%;
+    height: 576px;
+    float: left;
+    border-width: 1px;
+    border-color: black;
+    border-style: solid
+}
+
+#IDHumidity{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
+    height: 100%;
+    width: 100%;
+}
+
+#IDTemperature{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
+    height: 100%;
+    width: 100%;
+}
+
+#FANID{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
+    height: 100%;
+    width: 100%;
+}

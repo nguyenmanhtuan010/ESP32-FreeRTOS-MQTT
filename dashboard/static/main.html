@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nguyễn Mạnh Tuấn</title>
+    <script src="/static/main.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/static/scripts/jquery.min.js"></script>
+    <link rel="stylesheet" href="/static/main.css">
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.min.js"></script>
+</head>
+<body>
+  <div style="margin-left: 10px; margin-top: 30px;">
+    <div id = "box5">
+      <div id="box6">
+        <figure class="highcharts-figure">
+          <div id="container"></div>
+        </figure>
+      </div>
+    </div>
+
+    <div class = "box box1">
+      <div id="IDHumidity"></div>
+    </div>
+
+    <div class = "box box2" >
+      <div id="IDTemperature"></div>
+    </div>
+          
+    <div class = "box box3" style="color: black ;">
+      <div id="FANID">
+        <div>
+          <p id="FAN">FAN</p>
+          <button id="ButtonON1" type="button" onclick="Device1ON(),ButtonON1(),PubON1()">ON</button>
+          <button id="ButtonOFF1" type="button" onclick="Device1OFF(),ButtonOFF1(),PubOFF1()">OFF</button>
+        </div>
+      </div>
+    </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.min.js"></script>
+  <script>
+    var chart = Highcharts.chart('container', {
+
+    title: {
+      text: 'ĐỒ THỊ QUAN SÁT'
+    },
+
+    subtitle: {
+      text: ' <a href="https://irecusa.org/programs/solar-jobs-census/" target="_blank"> </a>'
+    },
+
+    yAxis: {
+      title: {
+        text: 'DATA'
+      }
+    },
+
+    xAxis: {
+      accessibility: {
+        rangeDescription: 'Range: 1 to 9'
+      }
+    },
+
+    legend: {
+      layout: 'vertical',
+      align: 'right',
+      verticalAlign: 'middle'
+    },
+
+    plotOptions: {
+      series: {
+        label: {
+          connectorAllowed: false
+        },
+          pointStart: 1
+      }
+    },
+
+    series: [{
+      name: 'Temperature',
+      data: []
+    }, {
+      name: 'Humidity',
+      data: []
+    }],
+
+    responsive: {
+      rules: [{
+        condition: {
+          maxWidth: 500
+        },
+        chartOptions: {
+          legend: {
+            layout: 'horizontal',
+            align: 'center',
+            verticalAlign: 'bottom'
+          }
+        }
+      }]
+    }
+  });  
+  var arrTemp = [];
+  var arrHumi = []; 
+  var socket = io.connect();
+  socket.on("temp",function(data){
+    document.getElementById("IDTemperature").innerHTML ="Temperature1: "+data;        
+    if (arrTemp.length >= 9) arrTemp.shift() // neu độ dai mang >=9 thi xóa phan tu dau tien cua mang di
+    arrTemp.push(data * 1); // neu nho hon 9 thi cho data la nhiet do vao mang
+    chart.series[0].setData(arrTemp); // set cai mang nhiet do do vao highchart
+  })
+  socket.on("humi",function(data){
+    document.getElementById("IDHumidity").innerHTML = "Humidity1: "+data;
+    if (arrHumi.length >= 9) arrHumi.shift()
+    arrHumi.push(data * 1);
+    chart.series[1].setData(arrHumi);
+  })
+ 
+  socket.on("sw_state",function(data){
+    if(data==1){
+      Device1ON();
+      ButtonON1();
+    }
+    else{
+      Device1OFF();
+      ButtonOFF1();
+    }
+  })
+  
+  function PubON1(){
+    socket.emit("ON1","1");
+  }
+
+  function PubOFF1(){
+    socket.emit("OFF1","0");
+  }
+  </script>
+</body>
+</html>
