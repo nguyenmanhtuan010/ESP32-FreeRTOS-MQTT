@@ -1,6 +1,6 @@
 .box{
     width: 33%;
-    height: 191px;
+    height: 161px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -24,9 +24,13 @@
     background-color:  gainsboro;
 }
 
+.box7{
+    background-color:  gainsboro;
+}
+
 #box5{
     width: 66%;
-    height: 576px;
+    height: 651px;
     float: left;
     border-width: 1px;
     border-color: black;
@@ -51,7 +55,7 @@
     width: 100%;
 }
 
-#FANID{
+#DeviceID{
     display: flex;
     flex-direction: column;
     justify-content: center;

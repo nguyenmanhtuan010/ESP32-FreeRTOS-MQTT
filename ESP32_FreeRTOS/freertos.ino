@@ -27,10 +27,12 @@ byte pin_column[COLUMN_NUM] = {16, 0, 2};
 Keypad keypad = Keypad(makeKeymap(keys), pin_rows, pin_column, ROW_NUM, COLUMN_NUM);
 float ThresholdTemp;
 
-#define FAN 12
-#define MANU_BUTTON 25
-#define AUTO_BUTTON 26
-#define FAN_BUTTON 27
+#define RELAY1 12
+#define RELAY2 13
+#define MANU_BUTTON 33
+#define AUTO_BUTTON 25
+#define RELAY1_BUTTON 26
+#define RELAY2_BUTTON 27
 #define THRESHOLD_BUTTON 14
 int MODE_STATE;
 
@@ -43,17 +45,17 @@ int totalColumns =16; // LCD 16x2
 int totalRows = 2;
 LiquidCrystal_I2C lcd(0x27, totalColumns, totalRows);
 
-const char* ssid = "tun";
-const char* password = "12345678";
-const char* mqtt_server = "192.168.137.92";
+const char* ssid = "YOUR SSID";
+const char* password = "YOUR PASSWORD";
+const char* mqtt_server = "YOUR IP";
 
 WiFiClient espClient;
 PubSubClient client(espClient);
 
 #define sub1 "temp"
 #define sub2 "humi"
-#define sub3 "sw_state"
-
+#define sub3 "sw1_state"
+#define sub4 "sw2_state"
 //kết nối wifi
 void setup_Wifi(){
   WiFi.begin(ssid,password);
@@ -75,8 +77,10 @@ void reconnect(){
       Serial.println("connected");
       client.subscribe("sub1");
       client.subscribe("sub2");
-      client.subscribe("sw");
+      client.subscribe("sw1");
+	  client.subscribe("sw2");
       client.subscribe("sub3");
+      client.subscribe("sub4");
      } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
@@ -96,12 +100,19 @@ void callBack(char* topic, byte* payload, unsigned int lenght){
   }
   Serial.println();
   if(MODE_STATE==1){
-    if(strcmp(topic, "sw")==0)
+    if(strcmp(topic, "sw1")==0)
     {
       if((char)payload[0] == '1') //on
-        digitalWrite(FAN,HIGH);
+        digitalWrite(RELAY1,HIGH);
       else if((char)payload[0] == '0') //off
-        digitalWrite(FAN, LOW);
+        digitalWrite(RELAY1, LOW);
+    }
+	if(strcmp(topic, "sw2")==0)
+    {
+      if((char)payload[0] == '1') //on
+        digitalWrite(RELAY2,HIGH);
+      else if((char)payload[0] == '0') //off
+        digitalWrite(RELAY2, LOW);
     }
   }
 }
@@ -119,8 +130,10 @@ void TaskreadSensor( void *pvParameters );
 void TaskChooseMode( void *pvParameters );
 void TaskAutoMode( void *pvParameters );
 void TaskManualMode( void *pvParameters );
-void TaskFanOn( void *pvParameters );
-void TaskFanOff( void *pvParameters );
+void TaskRelay1On( void *pvParameters );
+void TaskRelay1Off( void *pvParameters );
+void TaskRelay2On( void *pvParameters );
+void TaskRelay2Off( void *pvParameters );
 void TaskSendSensorData(void *pvParameters);
 void TaskUpdateThreshold(void *pvParameters);
 void setup() {
@@ -146,10 +159,12 @@ void setup() {
   delay(1000);
   lcd.clear();
 
-  pinMode(FAN,OUTPUT);
+  pinMode(RELAY1,OUTPUT);
+  pinMode(RELAY2,OUTPUT);
   pinMode(MANU_BUTTON,INPUT);
   pinMode(AUTO_BUTTON,INPUT);
-  pinMode(FAN_BUTTON,INPUT);
+  pinMode(RELAY1_BUTTON,INPUT);
+  pinMode(RELAY2_BUTTON,INPUT);
   pinMode(THRESHOLD_BUTTON,INPUT);
   
   xQueueTemp = xQueueCreate(1,sizeof(float));
@@ -277,10 +292,10 @@ void TaskManualMode(void *pvParameters) {
   for (;;) {
     xQueueReceive(xQueueTemp,&buff_t,portMAX_DELAY);
     xQueueReceive(xQueueHumi,&buff_h,portMAX_DELAY);
-    if (digitalRead(FAN_BUTTON) == 0) {
-      if(digitalRead(FAN) == 1){
+    if (digitalRead(RELAY1_BUTTON) == 0) {
+      if(digitalRead(RELAY1) == 1){
         xTaskCreatePinnedToCore(
-        TaskFanOff
+        TaskRelay1Off
         ,  "TurnOFF"
         ,  4096  // Stack size
         ,  NULL
@@ -290,7 +305,7 @@ void TaskManualMode(void *pvParameters) {
       }
       else{
         xTaskCreatePinnedToCore(
-        TaskFanOn
+        TaskRelay1On
         ,  "TurnON"
         ,  4096  // Stack size
         ,  NULL
@@ -299,6 +314,30 @@ void TaskManualMode(void *pvParameters) {
         ,  ARDUINO_RUNNING_CORE);
       }     
     }
+	
+	if (digitalRead(RELAY2_BUTTON) == 0) {
+      if(digitalRead(RELAY2) == 1){
+        xTaskCreatePinnedToCore(
+        TaskRelay2Off
+        ,  "TurnOFF"
+        ,  4096  // Stack size
+        ,  NULL
+        ,  4  // Priority
+        ,  NULL 
+        ,  ARDUINO_RUNNING_CORE);
+      }
+      else{
+        xTaskCreatePinnedToCore(
+        TaskRelay2On
+        ,  "TurnON"
+        ,  4096  // Stack size
+        ,  NULL
+        ,  4  // Priority
+        ,  NULL 
+        ,  ARDUINO_RUNNING_CORE);
+      }     
+    }
+	
     lcd.clear();
     lcd.setCursor(0,0);
     lcd.print("MANUAL MODE");
@@ -332,9 +371,9 @@ void TaskAutoMode(void *pvParameters) {
     if(digitalRead(THRESHOLD_BUTTON) == 0) {
     vTaskResume(xHandle4);
       }
-    if(buff_t < ThresholdTemp){
+    if(buff_t > ThresholdTemp){
        xTaskCreatePinnedToCore(
-        TaskFanOn
+        TaskRelay1On
         ,  "TurnON"
         ,  4096  // Stack size
         ,  NULL
@@ -344,7 +383,28 @@ void TaskAutoMode(void *pvParameters) {
     }
     else{
        xTaskCreatePinnedToCore(
-        TaskFanOff
+        TaskRelay1Off
+        ,  "TurnOFF"
+        ,  4096  // Stack size
+        ,  NULL
+        ,  4  // Priority
+        ,  NULL 
+        ,  ARDUINO_RUNNING_CORE);
+    }
+	
+	if(buff_h > ThresholdHumidity){
+       xTaskCreatePinnedToCore(
+        TaskRelay2On
+        ,  "TurnON"
+        ,  4096  // Stack size
+        ,  NULL
+        ,  4  // Priority
+        ,  NULL 
+        ,  ARDUINO_RUNNING_CORE);
+    }
+    else{
+       xTaskCreatePinnedToCore(
+        TaskRelay2Off
         ,  "TurnOFF"
         ,  4096  // Stack size
         ,  NULL
@@ -368,44 +428,67 @@ void TaskAutoMode(void *pvParameters) {
   }
 }
 
-void TaskFanOn(void *pvParameters) {
-    Serial.println("TaskFanOn running.....");
-    digitalWrite(FAN,HIGH);
+void TaskRelay1On(void *pvParameters) {
+    Serial.println("TaskRelay1On running.....");
+    digitalWrite(RELAY1,HIGH);
     vTaskDelete(NULL);
 }
 
-void TaskFanOff(void *pvParameters) {
-    Serial.println("TaskFanOff running.....");
-    digitalWrite(FAN,LOW);
+void TaskRelay1Off(void *pvParameters) {
+    Serial.println("TaskRelay1Off running.....");
+    digitalWrite(RELAY1,LOW);
+    vTaskDelete(NULL);
+}
+
+void TaskRelay2On(void *pvParameters) {
+    Serial.println("TaskRelay2On running.....");
+    digitalWrite(RELAY2,HIGH);
+    vTaskDelete(NULL);
+}
+
+void TaskRelay2Off(void *pvParameters) {
+    Serial.println("TaskRelay2Off running.....");
+    digitalWrite(RELAY2,LOW);
     vTaskDelete(NULL);
 }
 
 void TaskUpdateThreshold(void *pvParameters) {
   char key;
+  float userInputFloat[2] = {0.0, 0.0};
+  int inputIndex = 0;
   for (;;) {
-      lcd.clear();
-      lcd.setCursor(0, 0);
-      lcd.print("Enter Threshold:");
-      float userInputFloat = 0.0; 
-      
-      do {
-        key = keypad.getKey();
-        if (key >= '0' && key <= '9') {
-          userInputFloat = userInputFloat * 10 + (key - '0');
-          if (userInputFloat > 99.0) {
-             userInputFloat = 99.0;
-          }
-          lcd.setCursor(0, 1);
-          lcd.print( userInputFloat);
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Nhập ngưỡng:");
+    
+    do {
+      key = keypad.getKey();
+      if (key >= '0' && key <= '9') {
+        userInputFloat[inputIndex] = userInputFloat[inputIndex] * 10 + (key - '0');
+        if (userInputFloat[inputIndex] > 99.0) {
+           userInputFloat[inputIndex] = 99.0;
         }
-      } while (key != '#');   
-      ThresholdTemp = userInputFloat;
-      Serial.println("Updated ThresholdTemp: " + String(ThresholdTemp));
-      lcd.clear(); 
-      vTaskSuspend(xHandle4);  
-      vTaskDelay(1000 / portTICK_PERIOD_MS);  
+        lcd.setCursor(0, 1);
+        lcd.print(userInputFloat[inputIndex]);
+      }
+      if (key == '#') {
+        inputIndex++;
+        if (inputIndex >= 2) {
+          inputIndex = 0;
+        }
+      }
+    } while (inputIndex < 2);
+    
+    ThresholdTemp = userInputFloat[0];
+    ThresholdHumidity = userInputFloat[1];
+    Serial.println("Đã cập nhật ngưỡng nhiệt độ: " + String(ThresholdTemp));
+    Serial.println("Đã cập nhật ngưỡng độ ẩm: " + String(ThresholdHumidity));
+    lcd.clear();
+    vTaskSuspend(xHandle4);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
 }
+
 void TaskSendSensorData(void *pvParameters) {
   for (;;) {
     if (!client.connected()) {
@@ -414,18 +497,22 @@ void TaskSendSensorData(void *pvParameters) {
     client.loop();
     float h;
     float t;
-    int fanState = digitalRead(FAN);
+    int Relay1State = digitalRead(RELAY1);
+	int Relay2State = digitalRead(RELAY2);
     xQueueReceive(xQueueHumiMqtt,&h,portMAX_DELAY);
     xQueueReceive(xQueueTempMqtt,&t,portMAX_DELAY);
     char tempString[8];
     dtostrf(t, 1, 2, tempString);
     char humiString[8];
     dtostrf(h, 1, 2, humiString);
-    char fanString[8];
-    sprintf(fanString, "%d", fanState);
+    char Relay1String[8];
+	char Relay2String[8];
+    sprintf(Relay1String, "%d", Relay1State);
+	sprintf(Relay2String, "%d", Relay2State);
     client.publish(sub1, tempString);
     client.publish(sub2, humiString);
-    client.publish(sub3, fanString);
+    client.publish(sub3, Relay1String);
+	client.publish(sub4, Relay2String);
     Serial.println("TaskSendSensorData running.....");
     vTaskDelay(1000 / portTICK_PERIOD_MS); 
   }

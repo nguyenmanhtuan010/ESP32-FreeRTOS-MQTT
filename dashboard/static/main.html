@@ -31,14 +31,26 @@
     </div>
           
     <div class = "box box3" style="color: black ;">
-      <div id="FANID">
+      <div id="DeviceID1">
         <div>
-          <p id="FAN">FAN</p>
-          <button id="ButtonON1" type="button" onclick="Device1ON(),ButtonON1(),PubON1()">ON</button>
-          <button id="ButtonOFF1" type="button" onclick="Device1OFF(),ButtonOFF1(),PubOFF1()">OFF</button>
+          <p id="Device1">RELAY1</p>
+          <button id="ButtonON1" type="button" onclick="DeviceON1(),ButtonON1(),PubON1()">ON</button>
+          <button id="ButtonOFF1" type="button" onclick="DeviceOFF1(),ButtonOFF1(),PubOFF1()">OFF</button>
         </div>
       </div>
     </div>
+
+    <div class = "box box7" style="color: black ;">
+      <div id="DeviceID2">
+        <div>
+          <p id="Device2">RELAY2</p>
+          <button id="ButtonON2" type="button" onclick="DeviceON2(),ButtonON2(),PubON2()">ON</button>
+          <button id="ButtonOFF2" type="button" onclick="DeviceOFF2(),ButtonOFF2(),PubOFF2()">OFF</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.min.js"></script>
   <script>
@@ -118,23 +130,18 @@
     chart.series[1].setData(arrHumi);
   })
  
-  socket.on("sw_state",function(data){
-    if(data==1){
-      Device1ON();
-      ButtonON1();
-    }
-    else{
-      Device1OFF();
-      ButtonOFF1();
-    }
-  })
-  
   function PubON1(){
     socket.emit("ON1","1");
   }
-
   function PubOFF1(){
     socket.emit("OFF1","0");
+  }
+
+  function PubON2(){
+    socket.emit("ON2","1");
+  }
+  function PubOFF2(){
+    socket.emit("OFF2","0");
   }
   </script>
 </body>
